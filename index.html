@@ -1,0 +1,1002 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Time Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f5f5f5;
+  --surface: #ffffff;
+  --surface2: #fafafa;
+  --border: #e8e8e8;
+  --border2: #f0f0f0;
+  --text: #111111;
+  --text2: #555555;
+  --text3: #999999;
+  --seg-bg: #e5e5e5;
+  --seg-active: #ffffff;
+  --today-line: #ff3b30;
+  --weekend-bg: #f7f7f7;
+  --accent: #ff6c84;
+  --cloud: #34c759;
+  --warn: #ff3b30;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1c1c1e;
+    --surface: #2c2c2e;
+    --surface2: #3a3a3c;
+    --border: #3a3a3c;
+    --border2: #2c2c2e;
+    --text: #f2f2f7;
+    --text2: #aeaeb2;
+    --text3: #636366;
+    --seg-bg: #3a3a3c;
+    --seg-active: #545458;
+    --weekend-bg: #252527;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1c1c1e;
+  --surface: #2c2c2e;
+  --surface2: #3a3a3c;
+  --border: #3a3a3c;
+  --border2: #2c2c2e;
+  --text: #f2f2f7;
+  --text2: #aeaeb2;
+  --text3: #636366;
+  --seg-bg: #3a3a3c;
+  --seg-active: #545458;
+  --weekend-bg: #252527;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 14px; overflow: hidden; }
+
+.app { display: flex; flex-direction: column; height: 100%; }
+
+/* Topbar */
+.topbar { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; gap: 12px; }
+.topbar-left { flex: 1; min-width: 0; }
+.topbar-center { flex-shrink: 0; }
+.topbar-right { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 8px; }
+.date-label { font-size: 15px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+/* Segmented control */
+.seg { display: flex; background: var(--seg-bg); border-radius: 9px; padding: 2px; gap: 1px; }
+.seg button { padding: 5px 16px; border: none; background: transparent; border-radius: 7px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; transition: all 0.12s; white-space: nowrap; font-family: inherit; }
+.seg button.active { background: var(--seg-active); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.12); }
+
+/* Nav buttons */
+.nav-group { display: flex; align-items: center; gap: 4px; }
+.nav-btn { padding: 5px 12px; border: 1px solid var(--border); background: var(--surface); border-radius: 7px; font-size: 13px; color: var(--text2); cursor: pointer; font-family: inherit; transition: background 0.1s; }
+.nav-btn:hover { background: var(--surface2); }
+.nav-icon { padding: 5px 10px; font-size: 15px; font-weight: 300; }
+.cloud-badge { font-size: 15px; color: var(--cloud); line-height: 1; }
+
+/* Migration banner */
+.mig-banner { display: flex; align-items: center; justify-content: space-between; padding: 10px 20px; background: #fff8e6; border-bottom: 1px solid #f5d07a; font-size: 13px; color: #8a6200; flex-shrink: 0; gap: 12px; }
+.mig-banner button { padding: 5px 14px; background: #f0a500; color: white; border: none; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.mig-banner button:disabled { opacity: 0.6; }
+
+/* Main */
+.main { flex: 1; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+
+/* Week view */
+.week-view { display: flex; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+
+/* Project tabs */
+.proj-tabs { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: var(--surface); border-bottom: 1px solid var(--border); overflow-x: auto; flex-shrink: 0; scrollbar-width: none; }
+.proj-tabs::-webkit-scrollbar { display: none; }
+.proj-tab { display: flex; align-items: center; gap: 5px; padding: 5px 12px; border: 1.5px solid transparent; border-radius: 20px; font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.12s; background: none; font-family: inherit; }
+.proj-tab.active { color: white; }
+.proj-tab:not(.active) { border-color: var(--border); color: var(--text2); background: var(--surface); }
+.proj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.proj-tab.active .proj-dot { background: rgba(255,255,255,0.8); }
+.add-proj-btn { padding: 5px 12px; border: 1px dashed var(--border); background: none; border-radius: 20px; font-size: 13px; color: var(--text3); cursor: pointer; font-family: inherit; white-space: nowrap; }
+.add-proj-btn:hover { color: var(--text2); border-color: var(--text3); }
+
+/* Week summary bar */
+.week-bar { padding: 7px 16px; background: var(--surface2); border-bottom: 1px solid var(--border2); font-size: 12px; color: var(--text2); display: flex; gap: 20px; flex-shrink: 0; }
+.week-bar strong { color: var(--text); font-weight: 600; }
+
+/* Calendar area */
+.cal-area { flex: 1; min-height: 0; overflow: hidden; }
+.cal-scroll { width: 100%; overflow-y: auto; position: relative; }
+
+/* Day header */
+.day-header-row { display: grid; grid-template-columns: 44px repeat(7, 1fr); position: sticky; top: 0; z-index: 20; background: var(--surface); border-bottom: 1px solid var(--border); }
+.dh-spacer { border-right: 1px solid var(--border2); }
+.day-header { padding: 6px 10px; border-left: 1px solid var(--border2); }
+.day-header.weekend { background: var(--weekend-bg); }
+.dh-name { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; }
+.dh-num { font-size: 22px; font-weight: 300; color: var(--text); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.day-header.today .dh-name { color: var(--accent); }
+.day-header.today .dh-num { color: var(--accent); font-weight: 600; }
+
+/* Calendar grid */
+.cal-grid { display: grid; grid-template-columns: 44px repeat(7, 1fr); user-select: none; }
+.time-col { background: var(--surface); }
+.time-cell { height: 44px; padding: 3px 6px 0 0; display: flex; justify-content: flex-end; align-items: flex-start; font-size: 10px; color: var(--text3); border-bottom: 1px solid var(--border2); font-variant-numeric: tabular-nums; }
+
+.day-col { position: relative; border-left: 1px solid var(--border2); background: var(--surface); }
+.day-col.weekend { background: var(--weekend-bg); }
+.hour-cell { height: 44px; border-bottom: 1px solid var(--border2); }
+.hour-cell:last-child { border-bottom: none; }
+
+/* Time blocks */
+.tblock { position: absolute; left: 2px; right: 2px; border-radius: 6px; padding: 4px 7px; color: white; font-size: 12px; font-weight: 500; overflow: hidden; cursor: grab; box-shadow: 0 1px 3px rgba(0,0,0,0.18); }
+.tblock:active { cursor: grabbing; }
+.tblock-time { font-size: 11px; opacity: 0.85; margin-top: 1px; }
+.tblock-proj { font-size: 11px; opacity: 0.75; }
+.rh { position: absolute; left: 0; right: 0; height: 8px; cursor: ns-resize; z-index: 1; }
+.rh-top { top: 0; }
+.rh-bot { bottom: 0; }
+.drag-preview { position: absolute; left: 2px; right: 2px; border-radius: 6px; opacity: 0.5; pointer-events: none; }
+
+/* Current time line */
+.now-line { position: absolute; left: 0; right: 0; z-index: 5; pointer-events: none; }
+.now-line::before { content: ''; position: absolute; left: -3px; top: -3px; width: 6px; height: 6px; border-radius: 50%; background: var(--today-line); }
+.now-line::after { content: ''; position: absolute; left: 3px; top: -1px; right: 0; height: 2px; background: var(--today-line); }
+
+/* Expenses panel */
+.exp-panel { flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); }
+.exp-tab { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; cursor: pointer; }
+.exp-tab:hover { background: var(--surface2); }
+.exp-tab-l { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--text); }
+.exp-badge { background: var(--bg); border-radius: 10px; padding: 2px 8px; font-size: 12px; color: var(--text2); }
+.exp-tab-r { font-size: 13px; color: var(--text2); display: flex; align-items: center; gap: 8px; }
+.exp-chevron { font-size: 11px; color: var(--text3); transition: transform 0.15s; }
+.exp-chevron.open { transform: rotate(180deg); }
+.exp-body { border-top: 1px solid var(--border2); max-height: 200px; overflow-y: auto; }
+.exp-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; }
+.exp-row + .exp-row { border-top: 1px solid var(--border2); }
+.exp-info { display: flex; flex-direction: column; gap: 1px; }
+.exp-cat { font-size: 13px; font-weight: 500; }
+.exp-desc { font-size: 11px; color: var(--text3); }
+.exp-r { display: flex; align-items: center; gap: 12px; }
+.exp-amt { font-size: 13px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.exp-del { color: var(--border); cursor: pointer; font-size: 17px; line-height: 1; }
+.exp-del:hover { color: var(--warn); }
+.exp-edit { color: var(--border); cursor: pointer; font-size: 14px; line-height: 1; }
+.exp-edit:hover { color: var(--text2); }
+.exp-add-btn { display: block; width: calc(100% - 32px); margin: 8px 16px; padding: 8px; border: 1px dashed var(--border); background: none; border-radius: 8px; font-size: 13px; color: var(--text3); cursor: pointer; font-family: inherit; }
+.exp-add-btn:hover { color: var(--text2); border-color: var(--text3); }
+
+/* Month view */
+.month-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; background: var(--surface); }
+.month-dow-row { display: grid; grid-template-columns: repeat(7,1fr); background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.month-dow { padding: 6px 0; font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; text-align: center; }
+.month-grid-scroll { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.month-week-row { flex: 1; display: grid; grid-template-columns: repeat(7,1fr); border-bottom: 1px solid var(--border); min-height: 0; overflow: hidden; }
+.month-week-row:last-child { border-bottom: none; }
+.month-cell { border-right: 1px solid var(--border); padding: 5px 7px 5px 7px; cursor: pointer; display: flex; flex-direction: column; overflow: hidden; transition: background 0.1s; }
+.month-cell:last-child { border-right: none; }
+.month-cell:hover { background: var(--surface2); }
+.month-cell.other { opacity: 0.4; }
+.month-cell.weekend { background: var(--weekend-bg); }
+.month-cell-num { font-size: 12px; color: var(--text2); text-align: center; line-height: 20px; width: 20px; align-self: flex-end; flex-shrink: 0; margin-bottom: 3px; }
+.month-cell.today .month-cell-num { color: #e03131; font-weight: 600; }
+.month-entry { display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text); white-space: nowrap; overflow: hidden; margin-bottom: 2px; line-height: 1.4; }
+.month-entry-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.month-entry-text { overflow: hidden; text-overflow: ellipsis; color: var(--text2); }
+
+/* Summary view */
+.summ-view { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+.summ-rail { display: flex; align-items: center; gap: 6px; padding: 12px 16px; overflow-x: auto; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; scrollbar-width: none; }
+.summ-rail::-webkit-scrollbar { display: none; }
+.month-chip { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; background: var(--surface); color: var(--text2); font-family: inherit; transition: all 0.12s; flex-shrink: 0; }
+.month-chip:hover { border-color: var(--text3); color: var(--text); }
+.month-chip.active { background: var(--text); color: var(--surface); border-color: var(--text); }
+.summ-detail { flex: 1; overflow-y: auto; padding: 20px; }
+.summ-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text3); gap: 8px; }
+.summ-empty-icon { font-size: 32px; }
+.summ-card { background: var(--surface); border-radius: 14px; padding: 22px; max-width: 580px; margin: 0 auto; }
+.summ-title { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 18px; }
+.summ-stats { display: flex; gap: 28px; margin-bottom: 24px; flex-wrap: wrap; }
+.summ-stat { display: flex; flex-direction: column; gap: 4px; }
+.summ-stat-val { font-size: 32px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.summ-stat-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.summ-section { margin-bottom: 22px; }
+.summ-sec-title { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 10px; }
+
+.proj-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.proj-row-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.proj-row-info { flex: 1; min-width: 0; }
+.proj-row-name { font-size: 13px; font-weight: 500; margin-bottom: 4px; display: flex; justify-content: space-between; align-items: baseline; }
+.proj-row-track { height: 4px; background: var(--bg); border-radius: 2px; overflow: hidden; }
+.proj-row-fill { height: 100%; border-radius: 2px; }
+.proj-row-sub { font-size: 11px; color: var(--text3); margin-top: 3px; font-variant-numeric: tabular-nums; }
+
+.exp-summ-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 13px; border-bottom: 1px solid var(--border2); font-variant-numeric: tabular-nums; }
+.exp-summ-row:last-child { border-bottom: none; }
+.exp-summ-row.total { font-weight: 600; color: var(--text); }
+
+.revenue-box { background: var(--bg); border-radius: 10px; padding: 14px 16px; margin-top: 6px; }
+.revenue-label { font-size: 11px; color: var(--text3); font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.revenue-val { font-size: 26px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.revenue-sub { font-size: 12px; color: var(--text3); margin-top: 3px; }
+
+.export-btn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; margin-top: 18px; padding: 11px; border: 1px solid var(--border); background: var(--surface2); border-radius: 10px; font-size: 13px; font-weight: 500; color: var(--text2); cursor: pointer; font-family: inherit; transition: all 0.12s; }
+.export-btn:hover { background: var(--bg); border-color: var(--text3); color: var(--text); }
+
+/* Overlap warning */
+.ovlp-warn { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%); background: var(--warn); color: white; padding: 9px 20px; border-radius: 20px; font-size: 13px; font-weight: 500; z-index: 200; pointer-events: none; animation: popwarn 2.5s ease forwards; }
+@keyframes popwarn {
+  0% { opacity: 0; transform: translateX(-50%) translateY(8px); }
+  10% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Context menu */
+.ctx-menu { position: fixed; background: var(--surface); border-radius: 11px; box-shadow: 0 8px 30px rgba(0,0,0,0.18), 0 0 0 1px rgba(0,0,0,0.06); padding: 4px; z-index: 300; min-width: 170px; }
+.ctx-item { padding: 8px 13px; font-size: 13px; cursor: pointer; border-radius: 7px; color: var(--text); }
+.ctx-item:hover { background: var(--surface2); }
+.ctx-item.danger { color: var(--warn); }
+.ctx-sep { height: 1px; background: var(--border2); margin: 3px 0; }
+.ctx-sec { padding: 5px 13px 3px; font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.06em; }
+.ctx-proj-item { display: flex; align-items: center; gap: 8px; }
+.ctx-proj-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+/* Modals */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; z-index: 400; }
+.modal { background: var(--surface); border-radius: 16px; padding: 22px; width: 360px; max-width: 90vw; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 18px; }
+.modal-field { margin-bottom: 14px; }
+.modal-lbl { font-size: 11px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.modal-inp { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--surface2); color: var(--text); font-family: inherit; outline: none; }
+.modal-inp:focus { border-color: var(--text3); }
+.modal-sel { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--surface2); color: var(--text); font-family: inherit; }
+.modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+.modal-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; font-family: inherit; }
+.modal-btn.primary { background: var(--text); color: var(--surface); }
+.modal-btn.secondary { background: var(--bg); color: var(--text2); }
+.modal-btn.danger { background: var(--warn); color: white; }
+
+.color-grid { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.color-sw { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform 0.1s; }
+.color-sw:hover { transform: scale(1.15); }
+.color-sw.sel { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface) inset; }
+
+.proj-list-item { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--border2); }
+.proj-list-item:last-child { border-bottom: none; }
+.proj-list-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.proj-list-name { flex: 1; font-size: 14px; }
+.proj-list-del { color: var(--border); cursor: pointer; font-size: 18px; line-height: 1; }
+.proj-list-del:hover { color: var(--warn); }
+.proj-list-edit-icon { color: var(--border); cursor: pointer; font-size: 13px; line-height: 1; }
+.proj-list-edit-icon:hover { color: var(--text2); }
+.proj-list-edit-row { display: flex; flex-direction: column; gap: 8px; padding: 9px 0; border-bottom: 1px solid var(--border2); }
+.proj-list-edit-top { display: flex; align-items: center; gap: 8px; }
+.proj-list-edit-inp { flex: 1; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; background: var(--surface); color: var(--text); font-family: inherit; }
+.proj-list-save { padding: 5px 12px; background: var(--accent); color: white; border: none; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.proj-list-cancel { padding: 5px 10px; background: none; border: 1px solid var(--border); border-radius: 6px; font-size: 12px; color: var(--text2); cursor: pointer; font-family: inherit; }
+.proj-list-add { margin-top: 12px; }
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<div id="root"></div>
+<script>
+const html = htm.bind(React.createElement);
+const { useState, useEffect, useRef, useMemo } = React;
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOUR_H = 44;
+const RATE = 400;
+const COLORS = ['#ff6c84','#5b9aff','#34c759','#ff9f0a','#af52de','#00b5ad','#ff6000','#e07bdc'];
+const DEFAULT_PROJ = [{ id: 'wt-default', name: 'Wiper & True', color: '#ff6c84', order: 0 }];
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+function getMonday(d) {
+  const dt = new Date(d); dt.setHours(0,0,0,0);
+  const day = dt.getDay(), diff = dt.getDate() - day + (day === 0 ? -6 : 1);
+  dt.setDate(diff); return dt;
+}
+function getWeekDates(mon) {
+  return Array.from({length:7},(_,i) => { const d=new Date(mon); d.setDate(d.getDate()+i); return d; });
+}
+function fmt(d) { const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),dy=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${dy}`; }
+function parseDate(s) { const [y,m,d]=s.split('-').map(Number); return new Date(y,m-1,d); }
+function isToday(d) { return fmt(d)===fmt(new Date()); }
+function isWeekend(d) { const day=d.getDay(); return day===0||day===6; }
+function hourLabel(h) { if(h===0)return'12 AM'; if(h===12)return'12 PM'; return h<12?`${h} AM`:`${h-12} PM`; }
+function fmtHour(h) { if(h===0)return'12AM'; if(h===12)return'12PM'; return h<12?`${h}AM`:`${h-12}PM`; }
+function getHourFromY(y, top) { const idx=Math.floor((y-top)/HOUR_H); return HOURS[Math.max(0,Math.min(HOURS.length-1,idx))]; }
+function hasOverlap(blk, others) { return others.some(b=>b.date===blk.date&&blk.startHour<b.endHour&&blk.endHour>b.startHour); }
+function getMonthDates(yr, mo) {
+  const first=new Date(yr,mo,1), last=new Date(yr,mo+1,0), start=getMonday(first), cur=new Date(start), dates=[];
+  while(cur<=last||cur.getDay()!==1){ dates.push(new Date(cur)); cur.setDate(cur.getDate()+1); if(dates.length>42)break; }
+  return dates;
+}
+
+// ─── App ─────────────────────────────────────────────────────────────────────
+function App() {
+  const [view, setView] = useState('week');
+  const [currentWeek, setCurrentWeek] = useState(() => getMonday(new Date()));
+  const [currentMonth, setCurrentMonth] = useState(() => { const n=new Date(); return new Date(n.getFullYear(),n.getMonth(),1); });
+  const [blocks, setBlocks] = useState([]);
+  const [projects, setProjects] = useState(DEFAULT_PROJ);
+  const [expenses, setExpenses] = useState([]);
+  const [selProj, setSelProj] = useState('wt-default');
+  const [drag, setDrag] = useState(null);
+  const [resize, setResize] = useState(null);
+  const [move, setMove] = useState(null);
+  const [ctxMenu, setCtxMenu] = useState(null);
+  const [warnOvlp, setWarnOvlp] = useState(false);
+  const [expOpen, setExpOpen] = useState(false);
+  const [summMonth, setSummMonth] = useState(null);
+  const [showProjMgr, setShowProjMgr] = useState(false);
+  const [showExpForm, setShowExpForm] = useState(false);
+  const [editingExp, setEditingExp] = useState(null);
+  const [nowTime, setNowTime] = useState(new Date());
+  const blocksRef = useRef(blocks);
+  useEffect(() => { blocksRef.current = blocks; }, [blocks]);
+
+  function showOvlp() { setWarnOvlp(true); setTimeout(()=>setWarnOvlp(false),2500); }
+
+  function exportAllData() {
+    const payload = JSON.stringify({ blocks, projects, expenses, exportedAt: new Date().toISOString() }, null, 2);
+    const blob = new Blob([payload], {type: 'application/json'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `timetracker-backup-${fmt(new Date())}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function importData(file) {
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (data.blocks) setBlocks(data.blocks);
+        if (data.projects) setProjects(data.projects.sort((a,b)=>a.id==='wt-default'?-1:b.id==='wt-default'?1:(a.order||0)-(b.order||0)));
+        if (data.expenses) setExpenses(data.expenses);
+        alert(`Imported ${(data.blocks||[]).length} blocks, ${(data.projects||[]).length} projects, ${(data.expenses||[]).length} expenses.`);
+      } catch(e) { alert('Invalid JSON file.'); }
+    };
+    reader.readAsText(file);
+  }
+
+  useEffect(() => { const t=setInterval(()=>setNowTime(new Date()),30000); return ()=>clearInterval(t); }, []);
+
+  useEffect(() => { loadLS(); }, []);
+
+  function loadLS() {
+    try {
+      const b=JSON.parse(localStorage.getItem('wiperTrueTimeBlocks')||'[]');
+      const p=JSON.parse(localStorage.getItem('wiperTrueProjects')||'[]');
+      const e=JSON.parse(localStorage.getItem('wiperTrueExpenses')||'[]');
+      if(b.length)setBlocks(b); if(p.length)setProjects(p.sort((a,b)=>a.id==='wt-default'?-1:b.id==='wt-default'?1:(a.order||0)-(b.order||0))); if(e.length)setExpenses(e);
+    } catch(e) {}
+  }
+
+  useEffect(() => { try{localStorage.setItem('wiperTrueTimeBlocks',JSON.stringify(blocks));}catch(e){} },[blocks]);
+  useEffect(() => { try{localStorage.setItem('wiperTrueProjects',JSON.stringify(projects));}catch(e){} },[projects]);
+  useEffect(() => { try{localStorage.setItem('wiperTrueExpenses',JSON.stringify(expenses));}catch(e){} },[expenses]);
+
+  // Write helpers
+  function wAddBlock(blk) { setBlocks(p=>[...p,blk]); }
+  function wUpdBlock(blk) { setBlocks(p=>p.map(b=>b.id===blk.id?blk:b)); }
+  function wDelBlock(id) { setBlocks(p=>p.filter(b=>b.id!==id)); }
+  function wAddProj(pr) { setProjects(p=>[...p,pr]); }
+  function wUpdProj(pr) { setProjects(p=>p.map(x=>x.id===pr.id?pr:x)); }
+  function wDelProj(id) {
+    setProjects(p=>p.filter(p=>p.id!==id));
+    setBlocks(p=>p.map(b=>b.projectId===id?{...b,projectId:'wt-default'}:b));
+  }
+  function wAddExp(exp) { setExpenses(p=>[...p,exp]); }
+  function wUpdExp(exp) { setExpenses(p=>p.map(e=>e.id===exp.id?exp:e)); }
+  function wDelExp(id) { setExpenses(p=>p.filter(e=>e.id!==id)); }
+
+  // Undo
+  const histRef = useRef([]);
+  function saveHist() { histRef.current=[...histRef.current,blocksRef.current.map(b=>({...b}))].slice(-20); }
+  useEffect(() => {
+    const fn = (e) => {
+      if(!(e.metaKey||e.ctrlKey)||e.key!=='z')return;
+      e.preventDefault();
+      if(!histRef.current.length)return;
+      const prev=histRef.current[histRef.current.length-1];
+      histRef.current=histRef.current.slice(0,-1);
+      setBlocks(prev);
+    };
+    window.addEventListener('keydown',fn);
+    return ()=>window.removeEventListener('keydown',fn);
+  },[]);
+
+  // Global mouseup for resize/move
+  useEffect(() => {
+    if(!resize&&!move)return;
+    const fn = async () => {
+      if(resize){
+        const blk=blocksRef.current.find(b=>b.id===resize.blockId);
+        if(blk){
+          const upd={...blk,startHour:resize.startHour,endHour:resize.endHour,hours:resize.endHour-resize.startHour};
+          if(hasOverlap(upd,blocksRef.current.filter(b=>b.id!==blk.id))){showOvlp();}
+          else{saveHist();await wUpdBlock(upd);}
+        }
+        setResize(null); document.body.style.cursor='';
+      }
+      if(move){
+        const blk=blocksRef.current.find(b=>b.id===move.blockId);
+        if(blk){
+          const upd={...blk,date:move.currentDate,startHour:move.startHour,endHour:move.startHour+move.dur,hours:move.dur};
+          if(hasOverlap(upd,blocksRef.current.filter(b=>b.id!==blk.id))){showOvlp();}
+          else{saveHist();await wUpdBlock(upd);}
+        }
+        setMove(null); document.body.style.cursor='';
+      }
+    };
+    document.addEventListener('mouseup',fn);
+    return ()=>document.removeEventListener('mouseup',fn);
+  },[resize,move]);
+
+  useEffect(() => {
+    if(!ctxMenu)return;
+    const fn=()=>setCtxMenu(null);
+    window.addEventListener('click',fn);
+    return()=>window.removeEventListener('click',fn);
+  },[ctxMenu]);
+
+  function getProj(id){ return projects.find(p=>p.id===id)||projects[0]||DEFAULT_PROJ[0]; }
+
+  // Monthly aggregation
+  const monthlyData = useMemo(()=>{
+    const map={};
+    for(const b of blocks){
+      const k=b.date.slice(0,7);
+      if(!map[k])map[k]={key:k,hours:0,projs:{}};
+      map[k].hours+=b.hours;
+      map[k].projs[b.projectId]=(map[k].projs[b.projectId]||0)+b.hours;
+    }
+    for(const e of expenses){
+      const k=e.date.slice(0,7);
+      if(!map[k])map[k]={key:k,hours:0,projs:{}};
+      if(!map[k].expList)map[k].expList=[];
+      map[k].expList.push(e);
+    }
+    return Object.values(map).sort((a,b)=>b.key.localeCompare(a.key));
+  },[blocks,expenses]);
+
+  function exportMonth(m){
+    const dt=parseDate(m.key+'-01');
+    const name=dt.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+    const days=(m.hours/8).toFixed(1);
+    const rev=(m.hours/8)*RATE;
+    let t=`${name}\n${'─'.repeat(name.length)}\n\nWORKED\n${days} days · ${m.hours}h\n\nPROJECTS\n`;
+    for(const[pid,hrs] of Object.entries(m.projs)){
+      const pr=getProj(pid);
+      t+=`${pr.name}: ${hrs}h (${(hrs/8).toFixed(1)} days) — £${((hrs/8)*RATE).toLocaleString('en-GB',{minimumFractionDigits:0})}\n`;
+    }
+    if(m.expList&&m.expList.length){
+      const cats={};
+      for(const e of m.expList)cats[e.category]=(cats[e.category]||0)+e.amount;
+      const tot=m.expList.reduce((s,e)=>s+e.amount,0);
+      t+=`\nEXPENSES\n`;
+      for(const[c,a] of Object.entries(cats))t+=`${c}: £${a.toFixed(2)}\n`;
+      t+=`Total: £${tot.toFixed(2)}\n`;
+    }
+    t+=`\nTOTAL REVENUE: £${rev.toLocaleString('en-GB',{minimumFractionDigits:0})}`;
+    navigator.clipboard.writeText(t).then(()=>alert('Report copied to clipboard!'));
+  }
+
+  const weekDates = getWeekDates(currentWeek);
+  const todayFmt = fmt(new Date());
+
+  return html`<div class="app">
+    <div class="topbar">
+      <div class="topbar-left">
+        ${view==='week'?html`<span class="date-label">${(()=>{
+          const s=weekDates[0].toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+          const e=weekDates[6].toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+          return `${s} – ${e}`;
+        })()}</span>`:view==='month'?html`<span class="date-label">${currentMonth.toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</span>`:html`<span class="date-label">Summary</span>`}
+      </div>
+      <div class="topbar-center">
+        <div class="seg">
+          <button class=${view==='week'?'active':''} onClick=${()=>setView('week')}>Week</button>
+          <button class=${view==='month'?'active':''} onClick=${()=>setView('month')}>Month</button>
+          <button class=${view==='summary'?'active':''} onClick=${()=>setView('summary')}>Summary</button>
+        </div>
+      </div>
+      <div class="topbar-right">
+        ${view!=='summary'?html`<div class="nav-group">
+          <button class="nav-btn nav-icon" onClick=${()=>{
+            if(view==='week'){const d=new Date(currentWeek);d.setDate(d.getDate()-7);setCurrentWeek(d);}
+            else setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()-1,1));
+          }}>‹</button>
+          <button class="nav-btn" onClick=${()=>{
+            if(view==='week')setCurrentWeek(getMonday(new Date()));
+            else setCurrentMonth(new Date(new Date().getFullYear(),new Date().getMonth(),1));
+          }}>Today</button>
+          <button class="nav-btn nav-icon" onClick=${()=>{
+            if(view==='week'){const d=new Date(currentWeek);d.setDate(d.getDate()+7);setCurrentWeek(d);}
+            else setCurrentMonth(new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,1));
+          }}>›</button>
+        </div>`:null}
+        <input type="file" accept=".json" id="import-input" hidden onChange=${e=>{if(e.target.files[0])importData(e.target.files[0]);e.target.value='';}} />
+        <button class="nav-btn" onClick=${()=>document.getElementById('import-input').click()} style=${{fontSize:'12px',padding:'5px 10px'}}>↑ Import</button>
+        <button class="nav-btn" onClick=${exportAllData} style=${{fontSize:'12px',padding:'5px 10px'}}>↓ Export</button>
+      </div>
+    </div>
+
+    <div class="main">
+      ${view==='week'?html`<${WeekView}
+        weekDates=${weekDates} todayFmt=${todayFmt} blocks=${blocks} projects=${projects}
+        expenses=${expenses} selProj=${selProj} setSelProj=${setSelProj}
+        drag=${drag} setDrag=${setDrag} resize=${resize} setResize=${setResize}
+        move=${move} setMove=${setMove} ctxMenu=${ctxMenu} setCtxMenu=${setCtxMenu}
+        expOpen=${expOpen} setExpOpen=${setExpOpen} nowTime=${nowTime}
+        getProj=${getProj} wAddBlock=${wAddBlock} wDelExp=${wDelExp}
+        blocksRef=${blocksRef} saveHist=${saveHist} wAddExp=${wAddExp}
+        showOvlp=${showOvlp}
+        showProjMgr=${()=>setShowProjMgr(true)} showExpForm=${()=>setShowExpForm(true)}
+        setEditingExp=${setEditingExp}
+      />`:view==='month'?html`<${MonthView}
+        currentMonth=${currentMonth} blocks=${blocks} projects=${projects} getProj=${getProj}
+        onDayClick=${date=>{setCurrentWeek(getMonday(date));setView('week');}}
+      />`:html`<${SummaryView}
+        monthlyData=${monthlyData} summMonth=${summMonth} setSummMonth=${setSummMonth}
+        getProj=${getProj} exportMonth=${exportMonth}
+      />`}
+    </div>
+
+    ${warnOvlp?html`<div class="ovlp-warn">Blocks can't overlap</div>`:null}
+
+    ${ctxMenu?html`<${ContextMenu}
+      menu=${ctxMenu} block=${blocks.find(b=>b.id===ctxMenu.blockId)}
+      projects=${projects} getProj=${getProj}
+      onDelete=${async()=>{await wDelBlock(ctxMenu.blockId);setCtxMenu(null);}}
+      onReassign=${async pid=>{const b=blocksRef.current.find(b=>b.id===ctxMenu.blockId);if(b){saveHist();await wUpdBlock({...b,projectId:pid});}setCtxMenu(null);}}
+    />`:null}
+
+    ${showProjMgr?html`<${ProjectManager}
+      projects=${projects} selProj=${selProj} setSelProj=${setSelProj}
+      onAdd=${async(name,color)=>{const id='proj-'+Date.now();await wAddProj({id,name,color,order:projects.length});}}
+      onEdit=${async(pr)=>await wUpdProj(pr)}
+      onDelete=${async id=>{await wDelProj(id);if(selProj===id)setSelProj('wt-default');}}
+      onClose=${()=>setShowProjMgr(false)}
+    />`:null}
+
+    ${showExpForm?html`<${ExpenseForm}
+      onAdd=${async exp=>{await wAddExp({...exp,id:String(Date.now())});setShowExpForm(false);}}
+      onClose=${()=>setShowExpForm(false)}
+    />`:null}
+    ${editingExp?html`<${ExpenseForm} existing=${editingExp}
+      onAdd=${async exp=>{await wUpdExp({...exp,id:editingExp.id});setEditingExp(null);}}
+      onClose=${()=>setEditingExp(null)}
+    />`:null}
+  </div>`;
+}
+
+// ─── WeekView ─────────────────────────────────────────────────────────────────
+function WeekView({ weekDates, todayFmt, blocks, projects, expenses, selProj, setSelProj, drag, setDrag, resize, setResize, move, setMove, ctxMenu, setCtxMenu, expOpen, setExpOpen, nowTime, getProj, wAddBlock, wDelExp, blocksRef, saveHist, wAddExp, showOvlp, showProjMgr, showExpForm, setEditingExp }) {
+  const dayRefs = useRef([]);
+  const calScrollRef = React.useCallback(el => {
+    if (!el) return;
+    const applyHeight = () => {
+      const rect = el.getBoundingClientRect();
+      const expPanel = el.closest('.week-view')?.querySelector('.exp-panel');
+      const expH = expPanel ? expPanel.offsetHeight : 0;
+      const h = window.innerHeight - rect.top - expH;
+      if (h > 50) el.style.height = h + 'px';
+    };
+    requestAnimationFrame(() => {
+      applyHeight();
+      el.scrollTop = Math.max(0, nowTime.getHours() - 2) * HOUR_H;
+    });
+    window.addEventListener('resize', applyHeight);
+    const expPanel = el.closest('.week-view')?.querySelector('.exp-panel');
+    if (expPanel) { const ro = new ResizeObserver(applyHeight); ro.observe(expPanel); }
+    el.addEventListener('wheel', e => { e.preventDefault(); el.scrollTop += e.deltaY; }, { passive: false });
+  }, []);
+
+  const weekBlocks = blocks.filter(b => weekDates.some(d=>fmt(d)===b.date));
+  const weekHours = weekBlocks.reduce((s,b)=>s+b.hours,0);
+  const weekDays = (weekHours/8).toFixed(1);
+
+  const nowH = nowTime.getHours(), nowM = nowTime.getMinutes();
+  const nowPx = (nowH + nowM/60) * HOUR_H;
+  const todayIdx = weekDates.findIndex(d=>isToday(d));
+
+  // Handle create drag
+  function onDayMouseDown(e, date, idx) {
+    if(e.button!==0||e.target.closest('.tblock')||e.target.closest('.rh'))return;
+    const rect=dayRefs.current[idx].getBoundingClientRect();
+    const startHour=getHourFromY(e.clientY,rect.top);
+    setDrag({date:fmt(date),startHour,curHour:startHour,dayIdx:idx});
+    e.preventDefault();
+  }
+  function onDayMouseMove(e, date, idx) {
+    if(drag&&drag.dayIdx===idx){
+      const rect=dayRefs.current[idx].getBoundingClientRect();
+      setDrag(d=>({...d,curHour:getHourFromY(e.clientY,rect.top)}));
+    }
+    if(resize){
+      const rect=dayRefs.current[resize.dayIdx].getBoundingClientRect();
+      const h=getHourFromY(e.clientY,rect.top);
+      if(resize.edge==='top')setResize(r=>({...r,startHour:Math.min(h,r.endHour-1)}));
+      else setResize(r=>({...r,endHour:Math.max(h+1,r.startHour+1)}));
+    }
+    if(move){
+      const rect=dayRefs.current[idx].getBoundingClientRect();
+      const h=getHourFromY(e.clientY,rect.top);
+      const newStart=Math.max(HOURS[0],Math.min(HOURS[HOURS.length-1]-move.dur+1,h-move.offset));
+      setMove(m=>({...m,currentDate:fmt(date),startHour:newStart}));
+    }
+  }
+  async function onDayMouseUp(e, date, idx) {
+    if(!drag)return;
+    const sh=Math.min(drag.startHour,drag.curHour);
+    const eh=Math.max(drag.startHour,drag.curHour)+1;
+    if(eh>sh){
+      const blk={id:String(Date.now()),date:drag.date,startHour:sh,endHour:eh,hours:eh-sh,projectId:selProj};
+      if(hasOverlap(blk,blocksRef.current)){showOvlp();}
+      else{saveHist();await wAddBlock(blk);}
+    }
+    setDrag(null);
+  }
+
+  const weekStart = fmt(weekDates[0]), weekEnd = fmt(weekDates[6]);
+  const weekExpenses = expenses.filter(e=>e.date>=weekStart&&e.date<=weekEnd);
+  const expTotal = weekExpenses.reduce((s,e)=>s+e.amount,0);
+
+  return html`<div class="week-view">
+    <div class="proj-tabs">
+      ${projects.map(p=>html`<button key=${p.id}
+        class=${'proj-tab'+(selProj===p.id?' active':'')}
+        style=${selProj===p.id?{background:p.color,borderColor:p.color}:null}
+        onClick=${()=>setSelProj(p.id)}
+      ><span class="proj-dot" style=${selProj===p.id?{background:'rgba(255,255,255,0.75)'}:{background:p.color}}></span>${p.name}</button>`)}
+      <button class="add-proj-btn" onClick=${showProjMgr}>+ Manage projects</button>
+    </div>
+    <div class="week-bar">
+      <span>THIS WEEK: <strong>${weekHours}h</strong> · <strong>${weekDays} days</strong></span>
+    </div>
+    <div class="cal-area">
+      <div class="cal-scroll" ref=${calScrollRef}>
+        <div class="day-header-row">
+          <div class="dh-spacer"></div>
+          ${weekDates.map((d,i)=>html`<div key=${i} class=${'day-header'+(isToday(d)?' today':'')+(isWeekend(d)?' weekend':'')}>
+            <div class="dh-name">${DAYS[i]}</div>
+            <div class="dh-num">${d.getDate()}</div>
+          </div>`)}
+        </div>
+        <div class="cal-grid">
+          <div class="time-col">
+            ${HOURS.map(h=>html`<div key=${h} class="time-cell">${hourLabel(h)}</div>`)}
+          </div>
+          ${weekDates.map((date,di)=>{
+            const dateStr=fmt(date);
+            const dayBlocks=blocks.filter(b=>b.date===dateStr);
+            const isWknd=isWeekend(date);
+            const isTod=isToday(date);
+
+            // figure out active resize/move state
+            const displayBlocks=dayBlocks.map(b=>{
+              if(resize&&resize.blockId===b.id)return{...b,startHour:resize.startHour,endHour:resize.endHour,hours:resize.endHour-resize.startHour};
+              if(move&&String(b.id)===String(move.blockId)&&move.currentDate===dateStr)return{...b,startHour:move.startHour,endHour:move.startHour+move.dur};
+              return b;
+            }).filter(b=>!(move&&String(b.id)===String(move.blockId)&&move.currentDate!==dateStr));
+
+            // add moved block if it's landing here
+            if(move&&move.currentDate===dateStr&&!dayBlocks.find(b=>String(b.id)===String(move.blockId))){
+              const origBlock=blocksRef.current.find(b=>String(b.id)===String(move.blockId));
+              if(origBlock)displayBlocks.push({...origBlock,date:dateStr,startHour:move.startHour,endHour:move.startHour+move.dur});
+            }
+
+            return html`<div key=${di}
+              class=${'day-col'+(isWknd?' weekend':'')+(isTod?' today':'')}
+              ref=${el=>{if(el)dayRefs.current[di]=el;}}
+              onMouseDown=${e=>onDayMouseDown(e,date,di)}
+              onMouseMove=${e=>onDayMouseMove(e,date,di)}
+              onMouseUp=${e=>onDayMouseUp(e,date,di)}
+            >
+              ${HOURS.map(h=>html`<div key=${h} class="hour-cell"></div>`)}
+
+              ${isTod?html`<div class="now-line" style=${{top:nowPx+'px'}}></div>`:null}
+
+              ${drag&&drag.date===dateStr?html`<div class="drag-preview" style=${{
+                top:(Math.min(drag.startHour,drag.curHour))*HOUR_H+'px',
+                height:(Math.abs(drag.curHour-drag.startHour)+1)*HOUR_H+'px',
+                background:getProj(selProj).color
+              }}></div>`:null}
+
+              ${displayBlocks.map(b=>{
+                const pr=getProj(b.projectId);
+                const top=b.startHour*HOUR_H;
+                const height=b.hours*HOUR_H;
+                return html`<div key=${b.id} class="tblock"
+                  style=${{top:top+'px',height:height+'px',background:pr.color}}
+                  onContextMenu=${e=>{e.preventDefault();e.stopPropagation();setCtxMenu({x:e.clientX,y:e.clientY,blockId:b.id});}}
+                  onMouseDown=${e=>{
+                    e.stopPropagation();
+                    if(e.target.classList.contains('rh'))return;
+                    setMove({blockId:b.id,currentDate:dateStr,startHour:b.startHour,dur:b.hours,offset:getHourFromY(e.clientY,dayRefs.current[di].getBoundingClientRect().top)-b.startHour});
+                    document.body.style.cursor='grabbing';
+                  }}
+                >
+                  <div class="rh rh-top" onMouseDown=${e=>{e.preventDefault();e.stopPropagation();setResize({blockId:b.id,edge:'top',startHour:b.startHour,endHour:b.endHour,dayIdx:di});document.body.style.cursor='ns-resize';}}></div>
+                  <div>${fmtHour(b.startHour)} – ${fmtHour(b.endHour)}</div>
+                  ${height>50?html`<div class="tblock-proj">${pr.name}</div>`:null}
+                  <div class="rh rh-bot" onMouseDown=${e=>{e.preventDefault();e.stopPropagation();setResize({blockId:b.id,edge:'bot',startHour:b.startHour,endHour:b.endHour,dayIdx:di});document.body.style.cursor='ns-resize';}}></div>
+                </div>`;
+              })}
+            </div>`;
+          })}
+        </div>
+      </div>
+    </div>
+
+    <div class="exp-panel">
+      <div class="exp-tab" onClick=${()=>setExpOpen(o=>!o)}>
+        <div class="exp-tab-l">
+          Expenses
+          ${weekExpenses.length?html`<span class="exp-badge">${weekExpenses.length}</span>`:null}
+        </div>
+        <div class="exp-tab-r">
+          ${expTotal>0?html`<span>£${expTotal.toFixed(2)}</span>`:null}
+          <span class=${'exp-chevron'+(expOpen?' open':'')}>▾</span>
+        </div>
+      </div>
+      ${expOpen?html`<div class="exp-body">
+        ${weekExpenses.length===0?html`<div style=${{padding:'12px 16px',fontSize:'13px',color:'var(--text3)'}}>No expenses this week</div>`:null}
+        ${weekExpenses.map(e=>html`<div key=${e.id} class="exp-row">
+          <div class="exp-info">
+            <span class="exp-cat">${e.category}</span>
+            ${e.description?html`<span class="exp-desc">${e.description}</span>`:null}
+          </div>
+          <div class="exp-r">
+            <span class="exp-amt">£${e.amount.toFixed(2)}</span>
+            <span class="exp-edit" onClick=${()=>setEditingExp(e)}>✎</span>
+            <span class="exp-del" onClick=${()=>wDelExp(e.id)}>×</span>
+          </div>
+        </div>`)}
+        <button class="exp-add-btn" onClick=${showExpForm}>+ Add expense</button>
+      </div>`:null}
+    </div>
+  </div>`;
+}
+
+// ─── MonthView ────────────────────────────────────────────────────────────────
+function MonthView({ currentMonth, blocks, projects, getProj, onDayClick }) {
+  const yr=currentMonth.getFullYear(), mo=currentMonth.getMonth();
+  const dates=getMonthDates(yr,mo);
+  const weeks=[];
+  for(let i=0;i<dates.length;i+=7)weeks.push(dates.slice(i,i+7));
+
+  const gridRef = useRef(null);
+  useEffect(() => {
+    const el = gridRef.current;
+    if (!el) return;
+    const applyHeight = () => {
+      const mv = el.parentElement;
+      if (mv) {
+        const r = mv.getBoundingClientRect();
+        const h = window.innerHeight - r.top;
+        if (h > 50) mv.style.height = h + 'px';
+      }
+      const rect = el.getBoundingClientRect();
+      const totalH = window.innerHeight - rect.top;
+      if (totalH < 50) return;
+      el.style.height = totalH + 'px';
+      const rows = el.querySelectorAll('.month-week-row');
+      if (!rows.length) return;
+      const rowH = Math.floor(totalH / rows.length);
+      rows.forEach(row => {
+        row.style.height = rowH + 'px';
+        row.querySelectorAll('.month-cell').forEach(c => { c.style.height = rowH + 'px'; });
+      });
+    };
+    requestAnimationFrame(applyHeight);
+    window.addEventListener('resize', applyHeight);
+    return () => window.removeEventListener('resize', applyHeight);
+  }, [weeks.length]);
+
+  return html`<div class="month-view">
+    <div class="month-dow-row">
+      ${DAYS.map(d=>html`<div key=${d} class="month-dow">${d}</div>`)}
+    </div>
+    <div class="month-grid-scroll" ref=${el=>{gridRef.current=el;}}>
+      ${weeks.map((week,wi)=>html`<div key=${wi} class="month-week-row">
+        ${week.map((date,di)=>{
+          const ds=fmt(date);
+          const dayBlocks=blocks.filter(b=>b.date===ds);
+          const inMonth=date.getMonth()===mo;
+          return html`<div key=${di}
+            class=${'month-cell'+(inMonth?'':' other')+(isWeekend(date)?' weekend':'')+(isToday(date)?' today':'')}
+            onClick=${()=>onDayClick(date)}
+          >
+            <div class="month-cell-num">${date.getDate()}</div>
+            ${dayBlocks.slice(0,4).map(b=>{
+              const p=getProj(b.projectId);
+              return html`<div key=${b.id} class="month-entry">
+                <span class="month-entry-dot" style=${{background:p.color}}></span>
+                <span class="month-entry-text">${p.name} · ${b.hours}h</span>
+              </div>`;
+            })}
+            ${dayBlocks.length>4?html`<div class="month-entry"><span class="month-entry-text" style=${{color:'var(--text3)'}}>+${dayBlocks.length-4} more</span></div>`:null}
+          </div>`;
+        })}
+      </div>`)}
+    </div>
+  </div>`;
+}
+
+// ─── SummaryView ──────────────────────────────────────────────────────────────
+function SummaryView({ monthlyData, summMonth, setSummMonth, getProj, exportMonth }) {
+  const selKey = summMonth || (monthlyData[0]?.key);
+  const m = monthlyData.find(x=>x.key===selKey);
+
+  useEffect(()=>{
+    if(monthlyData.length&&!summMonth)setSummMonth(monthlyData[0].key);
+  },[monthlyData]);
+
+  if(!monthlyData.length)return html`<div class="summ-view">
+    <div class="summ-detail"><div class="summ-empty"><span class="summ-empty-icon">📋</span><span>No data yet — add some hours in Week view</span></div></div>
+  </div>`;
+
+  const days = m ? (m.hours/8).toFixed(1) : '0';
+  const revenue = m ? (m.hours/8)*RATE : 0;
+  const expList = m?.expList || [];
+  const expTotal = expList.reduce((s,e)=>s+e.amount,0);
+  const totalHours = m?.hours||0;
+
+  return html`<div class="summ-view">
+    <div class="summ-rail">
+      ${monthlyData.map(mo=>{
+        const dt=parseDate(mo.key+'-01');
+        const label=dt.toLocaleDateString('en-GB',{month:'short',year:'numeric'});
+        return html`<button key=${mo.key} class=${'month-chip'+(mo.key===selKey?' active':'')} onClick=${()=>setSummMonth(mo.key)}>${label}</button>`;
+      })}
+    </div>
+    <div class="summ-detail">
+      ${m?html`<div class="summ-card">
+        <div class="summ-title">${parseDate(m.key+'-01').toLocaleDateString('en-GB',{month:'long',year:'numeric'})}</div>
+        <div class="summ-stats">
+          <div class="summ-stat"><div class="summ-stat-val">${days}</div><div class="summ-stat-label">Days</div></div>
+          <div class="summ-stat"><div class="summ-stat-val">${totalHours}</div><div class="summ-stat-label">Hours</div></div>
+          ${expTotal>0?html`<div class="summ-stat"><div class="summ-stat-val">£${expTotal.toFixed(0)}</div><div class="summ-stat-label">Expenses</div></div>`:null}
+        </div>
+
+        ${Object.keys(m.projs).length>0?html`<div class="summ-section">
+          <div class="summ-sec-title">Projects</div>
+          ${Object.entries(m.projs).map(([pid,hrs])=>{
+            const pr=getProj(pid);
+            const pct=totalHours>0?Math.round(hrs/totalHours*100):0;
+            const pdays=(hrs/8).toFixed(1);
+            return html`<div key=${pid} class="proj-row">
+              <div class="proj-row-dot" style=${{background:pr.color}}></div>
+              <div class="proj-row-info">
+                <div class="proj-row-name">
+                  <span>${pr.name}</span>
+                  <span style=${{color:'var(--text2)',fontSize:'13px'}}>£${((hrs/8)*RATE).toLocaleString('en-GB',{minimumFractionDigits:0})}</span>
+                </div>
+                <div class="proj-row-track"><div class="proj-row-fill" style=${{width:pct+'%',background:pr.color}}></div></div>
+                <div class="proj-row-sub">${hrs}h · ${pdays} days · ${pct}%</div>
+              </div>
+            </div>`;
+          })}
+        </div>`:null}
+
+        ${expList.length>0?html`<div class="summ-section">
+          <div class="summ-sec-title">Expenses</div>
+          ${(()=>{
+            const cats={};
+            for(const e of expList)cats[e.category]=(cats[e.category]||0)+e.amount;
+            return [...Object.entries(cats).map(([c,a])=>html`<div class="exp-summ-row"><span>${c}</span><span>£${a.toFixed(2)}</span></div>`),
+              html`<div class="exp-summ-row total"><span>Total</span><span>£${expTotal.toFixed(2)}</span></div>`];
+          })()}
+        </div>`:null}
+
+        <div class="revenue-box">
+          <div class="revenue-label">Revenue at £${RATE}/day</div>
+          <div class="revenue-val">£${revenue.toLocaleString('en-GB',{minimumFractionDigits:0})}</div>
+          ${expTotal>0?html`<div class="revenue-sub">+ £${expTotal.toFixed(2)} expenses</div>`:null}
+        </div>
+
+        <button class="export-btn" onClick=${()=>exportMonth(m)}>Copy report to clipboard</button>
+      </div>`:html`<div class="summ-empty"><span>Select a month</span></div>`}
+    </div>
+  </div>`;
+}
+
+// ─── ContextMenu ─────────────────────────────────────────────────────────────
+function ContextMenu({ menu, block, projects, getProj, onDelete, onReassign }) {
+  if(!block)return null;
+  const curProj=getProj(block.projectId);
+  return html`<div class="ctx-menu" style=${{left:menu.x+'px',top:menu.y+'px'}} onClick=${e=>e.stopPropagation()}>
+    <div class="ctx-item danger" onClick=${onDelete}>Delete block</div>
+    ${projects.length>1?html`<${React.Fragment}>
+      <div class="ctx-sep"></div>
+      <div class="ctx-sec">Move to project</div>
+      ${projects.filter(p=>p.id!==block.projectId).map(p=>html`<div key=${p.id} class="ctx-item ctx-proj-item" onClick=${()=>onReassign(p.id)}>
+        <span class="ctx-proj-dot" style=${{background:p.color}}></span>${p.name}
+      </div>`)}
+    </${React.Fragment}>`:null}
+  </div>`;
+}
+
+// ─── ProjectManager ───────────────────────────────────────────────────────────
+function ProjectManager({ projects, selProj, setSelProj, onAdd, onEdit, onDelete, onClose }) {
+  const [name, setName] = useState('');
+  const [color, setColor] = useState(COLORS[1]);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+  function startEdit(p) { setEditingId(p.id); setEditName(p.name); setEditColor(p.color); }
+  function cancelEdit() { setEditingId(null); }
+  async function saveEdit(p) { await onEdit({...p,name:editName.trim()||p.name,color:editColor}); setEditingId(null); }
+  return html`<div class="modal-overlay" onClick=${onClose}>
+    <div class="modal" onClick=${e=>e.stopPropagation()}>
+      <div class="modal-title">Manage Projects</div>
+      <div style=${{marginBottom:'16px'}}>
+        ${projects.map(p=>editingId===p.id?html`<div key=${p.id} class="proj-list-edit-row">
+          <div class="proj-list-edit-top">
+            <span class="proj-list-dot" style=${{background:editColor}}></span>
+            <input class="proj-list-edit-inp" value=${editName} onInput=${e=>setEditName(e.target.value)} />
+            <button class="proj-list-save" onClick=${()=>saveEdit(p)}>Save</button>
+            <button class="proj-list-cancel" onClick=${cancelEdit}>Cancel</button>
+          </div>
+          <div class="color-grid" style=${{paddingLeft:'18px'}}>${COLORS.map(c=>html`<div key=${c} class=${'color-sw'+(editColor===c?' sel':'')} style=${{background:c}} onClick=${()=>setEditColor(c)}></div>`)}</div>
+        </div>`:html`<div key=${p.id} class="proj-list-item">
+          <span class="proj-list-dot" style=${{background:p.color}}></span>
+          <span class="proj-list-name">${p.name}</span>
+          <span class="proj-list-edit-icon" onClick=${()=>startEdit(p)}>✎</span>
+          ${p.id!=='wt-default'?html`<span class="proj-list-del" onClick=${()=>onDelete(p.id)}>×</span>`:html`<span style=${{fontSize:'11px',color:'var(--text3)'}}>default</span>`}
+        </div>`)}
+      </div>
+      <div class="proj-list-add">
+        <div class="modal-lbl">Add project</div>
+        <div class="modal-field"><input class="modal-inp" placeholder="Project name" value=${name} onInput=${e=>setName(e.target.value)} /></div>
+        <div class="modal-field">
+          <div class="modal-lbl">Colour</div>
+          <div class="color-grid">${COLORS.map(c=>html`<div key=${c} class=${'color-sw'+(color===c?' sel':'')} style=${{background:c}} onClick=${()=>setColor(c)}></div>`)}</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" onClick=${onClose}>Close</button>
+        <button class="modal-btn primary" onClick=${()=>{ if(name.trim()){onAdd(name.trim(),color);setName('');} }}>Add</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── ExpenseForm ──────────────────────────────────────────────────────────────
+function ExpenseForm({ onAdd, onClose, existing }) {
+  const [cat, setCat] = useState(existing?.category||'Travel');
+  const [amount, setAmount] = useState(existing?String(existing.amount):'');
+  const [desc, setDesc] = useState(existing?.description||'');
+  const [date, setDate] = useState(existing?.date||fmt(new Date()));
+  return html`<div class="modal-overlay" onClick=${onClose}>
+    <div class="modal" onClick=${e=>e.stopPropagation()}>
+      <div class="modal-title">${existing?'Edit Expense':'Add Expense'}</div>
+      <div class="modal-field"><div class="modal-lbl">Date</div><input type="date" class="modal-inp" value=${date} onChange=${e=>setDate(e.target.value)} /></div>
+      <div class="modal-field"><div class="modal-lbl">Category</div>
+        <select class="modal-sel" value=${cat} onChange=${e=>setCat(e.target.value)}>
+          <option>Travel</option><option>Accommodation</option><option>Food</option><option>Equipment</option><option>Other</option>
+        </select>
+      </div>
+      <div class="modal-field"><div class="modal-lbl">Amount (£)</div><input type="number" step="0.01" class="modal-inp" placeholder="0.00" value=${amount} onInput=${e=>setAmount(e.target.value)} /></div>
+      <div class="modal-field"><div class="modal-lbl">Description (optional)</div><input class="modal-inp" placeholder="e.g. Train to London" value=${desc} onInput=${e=>setDesc(e.target.value)} /></div>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" onClick=${onClose}>Cancel</button>
+        <button class="modal-btn primary" onClick=${()=>{ const a=parseFloat(amount); if(!isNaN(a)&&a>0)onAdd({date,category:cat,amount:a,description:desc}); }}>${existing?'Save':'Add'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(html`<${App}/>`);
+
+</script>
+
+</body></html>
